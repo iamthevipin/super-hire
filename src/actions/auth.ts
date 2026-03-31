@@ -32,7 +32,10 @@ export async function signUpWithEmail(
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { shouldCreateUser: true },
+    options: {
+      shouldCreateUser: true,
+      emailRedirectTo: undefined,
+    },
   });
 
   if (error) {
