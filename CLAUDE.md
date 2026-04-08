@@ -1,53 +1,113 @@
-@AGENTS.md
+## Project Overview
 
-# Super Hire — Project Context
+Super Hire is a lightweight ATS for startups that centralizes candidate pipeline management, team collaboration, and email communication in one place. Teams can set up hiring operations quickly and manage candidates across a kanban pipeline without leaving the product.
 
-## What is this?
-Multi-tenant ATS (Applicant Tracking System) for startups.
-Companies manage job postings and track candidates through a hiring pipeline.
+---
 
 ## Tech Stack
-Next.js 15 · TypeScript · Supabase · Tailwind CSS · shadcn/ui · Resend · next-intl · Vercel
 
-## Database Tables
-- enterprises — companies using Super Hire
-- enterprise_members — team members per company (roles: owner/admin/member)
-- jobs — job postings (status: draft/open/closed/archived)
-- candidates — applicants, unique per enterprise by email
-- applications — candidate to job link with kanban stage
-  (stages: applied/screening/interview/offer/hired/rejected)
+| Tool | Version / Notes |
+|---|---|
+| Next.js | 16.2.1 — App Router. Read `node_modules/next/dist/docs/` before writing any Next.js code. APIs may differ from your training data. |
+| React | 19.2.4 |
+| TypeScript | Strict mode. Zero `any`. Zero type errors before commit. |
+| Supabase | Auth + Postgres + RLS + Storage (`@supabase/ssr ^0.10`, `@supabase/supabase-js ^2.101`) |
+| Tailwind CSS | v4 — syntax differs from v3. Use CSS variables in `globals.css`. |
+| shadcn/ui | radix-nova style. Components live in `src/components/ui/`. Never modify them directly. |
+| Resend | Transactional email |
+| next-intl | i18n — en, de, fr, pt |
+| Zod | v4 (`^4.3.6`) — schema API differs from v3. Check docs before use. |
+| react-hook-form | `^7.72.0` with `@hookform/resolvers ^5.2.2` |
 
-## #1 Rule: enterprise_id on EVERYTHING
-Every single database query MUST filter by enterprise_id.
-Get enterprise_id from enterprise_members table using auth.getUser().
-Never trust enterprise_id from the browser or client.
+## Critical Rules
 
-## Folder Structure
-src/app/(auth)/            → login, signup pages
-src/app/(dashboard)/       → all protected pages
-src/components/ui/         → shadcn/ui components
-src/components/jobs/       → job feature components
-src/components/candidates/ → candidate feature components
-src/lib/supabase/          → client.ts, server.ts, middleware.ts
-src/actions/               → all Server Actions (mutations)
-src/types/                 → TypeScript types
-supabase/migrations/       → SQL migration files
+### 1. Code Organization
+
+- Many small files over few large files
+- High cohesion, low coupling
+- 200-400 lines typical, 800 max per file
+- Organize by feature/domain, not by type
+
+### 2. Code Style
+
+- No emojis in code, comments, or documentation
+- Immutability always - never mutate objects or arrays
+- No console.log in production code
+- Proper error handling with try/catch
+- Input validation with Zod or similar
+
+### 3. Testing
+
+- TDD: Write tests first
+- 80% minimum coverage
+- Unit tests for utilities
+- Integration tests for APIs
+- E2E tests for critical flows
+
+### 4. Security
+
+- No hardcoded secrets
+- Environment variables for sensitive data
+- Validate all user inputs
+- Parameterized queries only
+- CSRF protection enabled
+
+## File Structure
+
+```
+src/
+|-- app/              # Next.js app router
+|-- components/       # Reusable UI components
+|-- hooks/            # Custom React hooks
+|-- lib/              # Utility libraries
+|-- types/            # TypeScript definitions
+```
+
+## Key Patterns
+
+### API Response Format
+
+```typescript
+interface ApiResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+}
+```
+
+### Error Handling
+
+```typescript
+try {
+  const result = await operation()
+  return { success: true, data: result }
+} catch (error) {
+  console.error('Operation failed:', error)
+  return { success: false, error: 'User-friendly message' }
+}
+```
 
 ## Environment Variables
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY   (server only — never expose to browser)
-NEXT_PUBLIC_APP_URL
 
-## Commands
-npm run dev      → local development
-npm run build    → production build (run before every commit)
+```bash
+# Required
+DATABASE_URL=
+API_KEY=
 
-## Progress
-- [x] Phase 1 — Project setup, Supabase connected, live on Vercel
-- [x] Phase 2 — Database schema (5 tables with RLS)
-- [ ] Phase 3 — Auth pages (login, signup, onboarding)
-- [ ] Phase 4 — Jobs feature (list, create, kanban)
-- [ ] Phase 5 — Candidates feature
-- [ ] Phase 6 — Team collaboration
-- [ ] Phase 7 — i18n + testing + launch
+# Optional
+DEBUG=false
+```
+
+## Available Commands
+
+- `/tdd` - Test-driven development workflow
+- `/plan` - Create implementation plan
+- `/code-review` - Review code quality
+- `/build-fix` - Fix build errors
+
+## Git Workflow
+
+- Conventional commits: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`
+- Never commit to main directly
+- PRs require review
+- All tests must pass before merge

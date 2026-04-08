@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 import { updateSession } from '@/lib/supabase/middleware'
+import { createAdminClient } from '@/lib/supabase/admin'
 
 export async function proxy(request: NextRequest) {
   const { supabaseResponse, user } = await updateSession(request)
   const { pathname } = request.nextUrl
 
-  const isDashboard  = pathname.startsWith('/dashboard')
+  const isDashboard  = pathname.startsWith('/dashboard') || pathname.startsWith('/settings')
   const isOnboarding = pathname === '/onboarding'
   const isAuthRoute  =
     pathname.startsWith('/login') ||
@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
 
   // ── Authenticated — only query DB for routes that need it ─────────────────
   if (isDashboard || isOnboarding || isAuthRoute) {
-    const hasEnterprise = await checkEnterprise(request, user.id)
+    const hasEnterprise = await checkEnterprise(user.id)
 
     // Trying to reach /dashboard without an enterprise → onboarding
     if (isDashboard && !hasEnterprise) {
@@ -68,22 +68,11 @@ function redirectTo(
   return response
 }
 
-async function checkEnterprise(
-  request: NextRequest,
-  userId: string
-): Promise<boolean> {
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: () => {
-          // Read-only in this context — session already refreshed by updateSession.
-        },
-      },
-    }
-  )
+async function checkEnterprise(userId: string): Promise<boolean> {
+  // Use the service role key so this query bypasses RLS entirely.
+  // The user has already been verified by updateSession above — this is a
+  // purely internal existence check, not a user-facing data read.
+  const supabase = createAdminClient()
 
   const { data } = await supabase
     .from('enterprise_members')

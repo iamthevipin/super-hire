@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createEnterpriseSchema } from "@/lib/validations/enterprise";
 
@@ -37,39 +38,47 @@ export async function createEnterprise(
     return { error: "You must be signed in to create a company." };
   }
 
+  // Generate the enterprise ID server-side so we can use it for the membership
+  // insert without needing a SELECT after insert. This avoids triggering the
+  // enterprises SELECT policy (which requires an existing membership row) during
+  // the bootstrap flow where the user has no membership yet.
+  const enterpriseId = randomUUID();
   const slug = generateSlug(parsed.data.name);
 
-  const { data: enterprise, error: enterpriseError } = await supabase
-    .from("enterprises")
-    .insert({
-      name: parsed.data.name,
-      slug,
-      website_url: parsed.data.website_url || null,
-      employee_count: parsed.data.employee_count,
-      city: parsed.data.city,
-      state: parsed.data.state,
-      country: parsed.data.country,
-    })
-    .select("id")
-    .single();
+  try {
+    const { error: enterpriseError } = await supabase
+      .from("enterprises")
+      .insert({
+        id: enterpriseId,
+        name: parsed.data.name,
+        slug,
+        website_url: parsed.data.website_url || null,
+        employee_count: parsed.data.employee_count,
+        city: parsed.data.city,
+        state: parsed.data.state,
+        country: parsed.data.country,
+      });
 
-  if (enterpriseError) {
-    return { error: "Failed to create company. Please try again." };
+    if (enterpriseError) {
+      return { error: `Enterprise insert failed: ${enterpriseError.message} (code: ${enterpriseError.code})` };
+    }
+
+    const { error: memberError } = await supabase
+      .from("enterprise_members")
+      .insert({
+        enterprise_id: enterpriseId,
+        user_id: user.id,
+        role: "owner",
+      });
+
+    if (memberError) {
+      return { error: `Member insert failed: ${memberError.message} (code: ${memberError.code})` };
+    }
+
+    return { redirect: "/dashboard" };
+  } catch (err) {
+    return { error: `Unexpected error: ${err instanceof Error ? err.message : String(err)}` };
   }
-
-  const { error: memberError } = await supabase
-    .from("enterprise_members")
-    .insert({
-      enterprise_id: enterprise.id,
-      user_id: user.id,
-      role: "owner",
-    });
-
-  if (memberError) {
-    return { error: "Failed to set up your account. Please try again." };
-  }
-
-  return { redirect: "/dashboard" };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,18 +1,22 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { signUpSchema, otpSchema } from "@/lib/validations/auth";
 import {
   EMAIL_COOKIE,
   FLOW_COOKIE,
   COOKIE_MAX_AGE,
+  WELCOME_CONTEXT_COOKIE,
 } from "@/lib/constants/auth";
 
 type ActionResult =
   | { success: true }
   | { redirect: string }
   | { error: string };
+
+const flowSchema = z.enum(["signup", "login"]).nullable().optional();
 
 // ---------------------------------------------------------------------------
 // Sign up with email OTP
@@ -55,12 +59,62 @@ export async function signUpWithEmail(
 }
 
 // ---------------------------------------------------------------------------
+// Login with email — checks existence via getUserByEmail before sending OTP
+// ---------------------------------------------------------------------------
+export async function loginWithEmail(
+  formData: FormData
+): Promise<ActionResult> {
+  const raw = { email: formData.get("email") as string };
+  const parsed = signUpSchema.safeParse(raw);
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid email" };
+  }
+
+  const { email } = parsed.data;
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      shouldCreateUser: false,
+      emailRedirectTo: undefined,
+    },
+  });
+
+  if (error) {
+    // Supabase returns this when shouldCreateUser=false and the user doesn't exist
+    if (
+      error.message.toLowerCase().includes("signups not allowed") ||
+      error.message.toLowerCase().includes("not allowed")
+    ) {
+      return {
+        error: "No account found with this email. Please sign up first.",
+      };
+    }
+    return { error: error.message };
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(EMAIL_COOKIE, email, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
 // Verify 6-digit OTP
 // ---------------------------------------------------------------------------
 export async function verifyOtp(formData: FormData): Promise<ActionResult> {
   const raw = { otp: formData.get("otp") as string };
   const parsed = otpSchema.safeParse(raw);
-  const flow = formData.get("flow") as "signup" | "login" | null;
+  const flowResult = flowSchema.safeParse(formData.get("flow"));
+  const flow = flowResult.success ? flowResult.data : null;
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Invalid code" };
@@ -137,6 +191,14 @@ export async function signOut(): Promise<{ redirect: string }> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   return { redirect: "/login" };
+}
+
+// ---------------------------------------------------------------------------
+// Clear welcome cookie — called client-side after modal mounts
+// ---------------------------------------------------------------------------
+export async function clearWelcomeCookie(): Promise<void> {
+  const cookieStore = await cookies();
+  cookieStore.delete(WELCOME_CONTEXT_COOKIE);
 }
 
 // ---------------------------------------------------------------------------

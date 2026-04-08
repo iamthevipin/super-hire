@@ -9,7 +9,7 @@ import { AuthSplitLayout } from "@/components/auth/auth-split-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { signUpWithEmail, signInWithGoogle } from "@/actions/auth";
+import { loginWithEmail, signInWithGoogle } from "@/actions/auth";
 import { signUpSchema, type SignUpSchema } from "@/lib/validations/auth";
 
 export default function LoginPage() {
@@ -28,6 +28,7 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (searchParams.get("error") === "no_account") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setServerError(
         "No account found for this email. Please sign up to create one."
       );
@@ -47,7 +48,7 @@ function LoginPageContent() {
     const formData = new FormData();
     formData.set("email", data.email);
 
-    const result = await signUpWithEmail(formData);
+    const result = await loginWithEmail(formData);
 
     if ("error" in result) {
       setServerError(result.error);

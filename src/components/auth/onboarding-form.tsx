@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { createEnterprise } from "@/actions/enterprise";
 import {
   createEnterpriseSchema,
@@ -43,6 +44,7 @@ export function OnboardingForm() {
       return;
     }
 
+    router.refresh();
     router.push(result.redirect);
   }
 
@@ -181,7 +183,8 @@ const labelClass =
 
 const inputClass = "h-11 rounded-xl border-input";
 
-const selectClass =
-  "h-11 w-full rounded-xl border border-input bg-white px-3 text-sm " +
-  "focus:outline-none focus:ring-2 focus:ring-[#117a72] focus:border-[#117a72] " +
-  "disabled:opacity-50 disabled:cursor-not-allowed";
+const selectClass = cn(
+  "h-11 w-full rounded-xl border border-input bg-white px-3 text-sm",
+  "focus:outline-none focus:ring-2 focus:ring-[#117a72] focus:border-[#117a72]",
+  "disabled:opacity-50 disabled:cursor-not-allowed"
+);
