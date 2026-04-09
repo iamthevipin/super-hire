@@ -197,4 +197,44 @@ describe('NotesTab', () => {
 
     expect(addNote).toHaveBeenCalledWith('cand-1', 'stage-1', 'Excellent problem solver');
   });
+
+  it('calls updateNote with noteId and trimmed body when Save is clicked in edit mode', async () => {
+    const { updateNote } = await import('@/actions/notes');
+    const user = userEvent.setup();
+    render(<NotesTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Edit'));
+
+    await user.click(screen.getByText('Edit'));
+    // The textarea is pre-filled with note body; clear and retype
+    const textarea = screen.getByDisplayValue('Strong communicator');
+    await user.clear(textarea);
+    await user.type(textarea, 'Updated text');
+    await user.click(screen.getByText('Save'));
+
+    expect(updateNote).toHaveBeenCalledWith('note-1', 'Updated text');
+  });
+
+  it('does not call updateNote when Save is clicked with empty body', async () => {
+    const { updateNote } = await import('@/actions/notes');
+    const user = userEvent.setup();
+    render(<NotesTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Edit'));
+
+    await user.click(screen.getByText('Edit'));
+    const textarea = screen.getByDisplayValue('Strong communicator');
+    await user.clear(textarea);
+    await user.click(screen.getByText('Save'));
+
+    expect(updateNote).not.toHaveBeenCalled();
+  });
+
+  it('shows error state when getNotesForCandidate returns error', async () => {
+    const { getNotesForCandidate } = await import('@/actions/notes');
+    vi.mocked(getNotesForCandidate).mockResolvedValueOnce({ error: 'Forbidden' });
+
+    render(<NotesTab {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByText('Forbidden')).toBeInTheDocument();
+    });
+  });
 });

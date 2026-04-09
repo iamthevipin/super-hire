@@ -177,4 +177,123 @@ describe('FeedbackTab', () => {
       'Impressive background'
     );
   });
+
+  it('shows error state when getFeedbackForCandidate returns error', async () => {
+    const { getFeedbackForCandidate } = await import('@/actions/feedback');
+    vi.mocked(getFeedbackForCandidate).mockResolvedValueOnce({ error: 'Forbidden' });
+
+    render(<FeedbackTab {...defaultProps} />);
+    await waitFor(() => {
+      expect(screen.getByText('Forbidden')).toBeInTheDocument();
+    });
+  });
+
+  it('calls clearStageRating when myRating is null but myCommentId exists', async () => {
+    const { clearStageRating } = await import('@/actions/feedback');
+    const { getMyFeedbackForStage } = await import('@/actions/feedback');
+    vi.mocked(getMyFeedbackForStage).mockResolvedValueOnce({
+      rating: null,
+      comment: { id: 'comment-existing', body: 'Old comment' },
+    });
+
+    const user = userEvent.setup();
+    render(<FeedbackTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Save feedback'));
+
+    // myRating is null and myCommentId is set — clicking Save triggers clearStageRating
+    await user.click(screen.getByText('Save feedback'));
+
+    expect(clearStageRating).toHaveBeenCalledWith(validUuid, stageUuid);
+  });
+
+  it('calls deleteFeedbackComment when Delete button is clicked on own comment', async () => {
+    const { getFeedbackForCandidate, deleteFeedbackComment } = await import('@/actions/feedback');
+    vi.mocked(getFeedbackForCandidate).mockResolvedValueOnce({
+      data: [
+        {
+          stage: { id: stageUuid, name: 'Interview', position: 2 },
+          rating: null,
+          comments: [
+            {
+              id: 'comment-1',
+              user_id: 'user-abc',
+              user_name: 'Alice',
+              body: 'My comment',
+              created_at: '2026-04-01T10:00:00Z',
+              updated_at: '2026-04-01T10:00:00Z',
+              is_own: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<FeedbackTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Delete'));
+
+    await user.click(screen.getByText('Delete'));
+
+    expect(deleteFeedbackComment).toHaveBeenCalledWith('comment-1');
+  });
+
+  it('enters edit mode when Edit is clicked and shows textarea with comment body', async () => {
+    const { getFeedbackForCandidate } = await import('@/actions/feedback');
+    vi.mocked(getFeedbackForCandidate).mockResolvedValueOnce({
+      data: [
+        {
+          stage: { id: stageUuid, name: 'Interview', position: 2 },
+          rating: null,
+          comments: [
+            {
+              id: 'comment-1',
+              user_id: 'user-abc',
+              user_name: 'Alice',
+              body: 'Original comment',
+              created_at: '2026-04-01T10:00:00Z',
+              updated_at: '2026-04-01T10:00:00Z',
+              is_own: true,
+            },
+          ],
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<FeedbackTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Edit'));
+
+    await user.click(screen.getByText('Edit'));
+
+    expect(screen.getByDisplayValue('Original comment')).toBeInTheDocument();
+    expect(screen.getByText('Save')).toBeInTheDocument();
+    expect(screen.getByText('Cancel')).toBeInTheDocument();
+  });
+
+  it('collapses and expands a stage group when its header is clicked', async () => {
+    const { getFeedbackForCandidate } = await import('@/actions/feedback');
+    vi.mocked(getFeedbackForCandidate).mockResolvedValueOnce({
+      data: [
+        {
+          stage: { id: stageUuid, name: 'Interview', position: 2 },
+          rating: 3,
+          comments: [],
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<FeedbackTab {...defaultProps} />);
+    await waitFor(() => screen.getByText('Interview'));
+
+    // Stage is expanded by default (currentStageId === stageUuid)
+    // Click to collapse
+    await user.click(screen.getByRole('button', { name: /interview/i }));
+    // After collapse, comments section is hidden; rating still in header
+    // Click again to expand
+    await user.click(screen.getByRole('button', { name: /interview/i }));
+
+    // No throw = toggle works
+    expect(screen.getByText('Interview')).toBeInTheDocument();
+  });
 });

@@ -39,8 +39,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${appUrl}/settings?tab=integrations&error=invalid_state`);
   }
 
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) {
     return NextResponse.redirect(`${appUrl}/settings?tab=integrations&error=not_configured`);
@@ -119,6 +119,7 @@ export async function GET(request: NextRequest) {
     .upsert(upsertPayload, { onConflict: 'user_id,provider' });
 
   if (upsertError) {
+    console.error('[gmail/callback] upsert error:', JSON.stringify(upsertError));
     return NextResponse.redirect(`${appUrl}/settings?tab=integrations&error=save_failed`);
   }
 

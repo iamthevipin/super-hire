@@ -31,8 +31,8 @@ interface GmailIntegrationRow {
 }
 
 async function refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; expiresAt: string } | null> {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GMAIL_CLIENT_ID;
+  const clientSecret = process.env.GMAIL_CLIENT_SECRET;
 
   if (!clientId || !clientSecret) return null;
 
@@ -203,8 +203,8 @@ export async function POST(request: NextRequest) {
   });
 
   if (!gmailRes.ok) {
-    // Log to stderr for server-side observability; do not expose details to client
-    void gmailRes.text();
+    const errBody = await gmailRes.text();
+    console.error('[gmail/send] Gmail API error:', gmailRes.status, errBody);
     return NextResponse.json(
       { error: 'Failed to send email. Please try again.' },
       { status: 502 }

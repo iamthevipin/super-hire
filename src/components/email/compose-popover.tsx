@@ -20,8 +20,9 @@ export function ComposePopover({ window: win, onClose, onMinimize, onSent }: Com
   const [error, setError] = useState<string | null>(null);
 
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
-      StarterKit.configure({ heading: false, codeBlock: false, code: false, blockquote: false, horizontalRule: false }),
+      StarterKit.configure({ heading: false, codeBlock: false, code: false, blockquote: false, horizontalRule: false, underline: false }),
       Underline,
     ],
     content: '',

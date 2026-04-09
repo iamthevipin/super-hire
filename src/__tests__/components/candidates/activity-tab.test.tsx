@@ -91,3 +91,105 @@ describe('ActivityTab', () => {
     });
   });
 });
+
+describe('ActivityTab — formatRelativeTime branches', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Only fake Date — leave setTimeout/setInterval real so waitFor can poll
+    vi.useFakeTimers({ toFake: ['Date'] });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function makeEvent(id: string, createdAt: string) {
+    return {
+      id,
+      enterprise_id: 'ent-1',
+      candidate_id: 'cand-1',
+      application_id: null,
+      event_type: 'stage_changed',
+      actor_id: 'user-1',
+      actor_name: 'Alice',
+      description: 'Test event',
+      metadata: null,
+      created_at: createdAt,
+    };
+  }
+
+  it('shows "just now" for events less than 1 minute ago', async () => {
+    const { getActivityForCandidate } = await import('@/actions/activity');
+    const now = new Date('2026-04-10T10:00:00Z');
+    vi.setSystemTime(now);
+    const createdAt = new Date(now.getTime() - 30_000).toISOString(); // 30s ago
+    vi.mocked(getActivityForCandidate).mockResolvedValueOnce({
+      data: [makeEvent('e1', createdAt)],
+    });
+
+    render(<ActivityTab candidateId="cand-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('just now')).toBeInTheDocument();
+    });
+  });
+
+  it('shows "Xm ago" for events between 1 and 59 minutes ago', async () => {
+    const { getActivityForCandidate } = await import('@/actions/activity');
+    const now = new Date('2026-04-10T10:00:00Z');
+    vi.setSystemTime(now);
+    const createdAt = new Date(now.getTime() - 30 * 60_000).toISOString(); // 30 min ago
+    vi.mocked(getActivityForCandidate).mockResolvedValueOnce({
+      data: [makeEvent('e2', createdAt)],
+    });
+
+    render(<ActivityTab candidateId="cand-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('30m ago')).toBeInTheDocument();
+    });
+  });
+
+  it('shows "Xh ago" for events between 1 and 23 hours ago', async () => {
+    const { getActivityForCandidate } = await import('@/actions/activity');
+    const now = new Date('2026-04-10T10:00:00Z');
+    vi.setSystemTime(now);
+    const createdAt = new Date(now.getTime() - 3 * 3600_000).toISOString(); // 3 hours ago
+    vi.mocked(getActivityForCandidate).mockResolvedValueOnce({
+      data: [makeEvent('e3', createdAt)],
+    });
+
+    render(<ActivityTab candidateId="cand-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('3h ago')).toBeInTheDocument();
+    });
+  });
+
+  it('shows "Xd ago" for events between 1 and 6 days ago', async () => {
+    const { getActivityForCandidate } = await import('@/actions/activity');
+    const now = new Date('2026-04-10T10:00:00Z');
+    vi.setSystemTime(now);
+    const createdAt = new Date(now.getTime() - 3 * 86400_000).toISOString(); // 3 days ago
+    vi.mocked(getActivityForCandidate).mockResolvedValueOnce({
+      data: [makeEvent('e4', createdAt)],
+    });
+
+    render(<ActivityTab candidateId="cand-1" />);
+    await waitFor(() => {
+      expect(screen.getByText('3d ago')).toBeInTheDocument();
+    });
+  });
+
+  it('shows locale date string for events 7 or more days ago', async () => {
+    const { getActivityForCandidate } = await import('@/actions/activity');
+    const now = new Date('2026-04-10T10:00:00Z');
+    vi.setSystemTime(now);
+    const old = new Date('2026-03-01T10:00:00Z');
+    vi.mocked(getActivityForCandidate).mockResolvedValueOnce({
+      data: [makeEvent('e5', old.toISOString())],
+    });
+
+    render(<ActivityTab candidateId="cand-1" />);
+    await waitFor(() => {
+      expect(screen.getByText(old.toLocaleDateString())).toBeInTheDocument();
+    });
+  });
+});
