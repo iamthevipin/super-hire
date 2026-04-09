@@ -6,14 +6,17 @@ import { Mail, Star } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FeedbackQuickPanel } from '@/components/candidates/feedback-quick-panel';
+import { useCompose } from '@/hooks/use-compose';
 import type { ApplicationWithCandidate } from '@/types/candidates';
 
 interface KanbanCardProps {
   application: ApplicationWithCandidate;
   jobId: string;
+  isAdmin?: boolean;
 }
 
-export function KanbanCard({ application, jobId }: KanbanCardProps) {
+export function KanbanCard({ application, jobId, isAdmin = false }: KanbanCardProps) {
+  const { openCompose } = useCompose();
   const { candidate } = application;
   const [showFeedbackPanel, setShowFeedbackPanel] = useState(false);
 
@@ -74,15 +77,35 @@ export function KanbanCard({ application, jobId }: KanbanCardProps) {
               {initials}
             </span>
             <div className="flex gap-1">
-              <button
-                type="button"
-                disabled
-                title="Email — Coming soon"
-                className="text-[#b8c8c6] cursor-not-allowed p-1"
-                onClick={(e) => e.preventDefault()}
-              >
-                <Mail size={12} />
-              </button>
+              {isAdmin ? (
+                <button
+                  type="button"
+                  title="Send email"
+                  className="text-[#8fa8a6] hover:text-[#3e6b66] p-1 transition-colors"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    openCompose({
+                      candidateId: candidate.id,
+                      candidateName: `${candidate.first_name} ${candidate.last_name}`,
+                      candidateEmail: candidate.email,
+                      applicationId: application.id,
+                    });
+                  }}
+                >
+                  <Mail size={12} />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  title="Email — admins only"
+                  className="text-[#b8c8c6] cursor-not-allowed p-1"
+                  onClick={(e) => e.preventDefault()}
+                >
+                  <Mail size={12} />
+                </button>
+              )}
               <button
                 type="button"
                 title="Leave feedback"

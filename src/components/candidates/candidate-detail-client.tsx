@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { CandidateHeader } from '@/components/candidates/candidate-header';
 import { OverviewTab } from '@/components/candidates/overview-tab';
 import { ResumeTab } from '@/components/candidates/resume-tab';
-import { EmailTab } from '@/components/candidates/stub-tabs';
+import { EmailTab } from '@/components/candidates/email-tab';
 import { FeedbackTab } from '@/components/candidates/feedback-tab';
 import { NotesTab } from '@/components/candidates/notes-tab';
 import { ActivityTab } from '@/components/candidates/activity-tab';
@@ -40,7 +40,7 @@ export function CandidateDetailClient({
     { id: 'resume', label: 'Resume' },
     { id: 'notes', label: 'Notes' },
     { id: 'feedback', label: 'Feedback' },
-    { id: 'email', label: 'Email' },
+    { id: 'email', label: 'Email', adminOnly: true },
     { id: 'activity', label: 'Activity', adminOnly: true },
   ];
 
@@ -108,7 +108,15 @@ export function CandidateDetailClient({
           currentUserId={currentUserId}
         />
       )}
-      {activeTab === 'email' && <EmailTab />}
+      {isAdmin && activeTab === 'email' && (
+        <EmailTab
+          candidateId={detail.candidate.id}
+          applicationId={applicationId}
+          candidateEmail={detail.candidate.email}
+          candidateName={`${detail.candidate.first_name} ${detail.candidate.last_name}`}
+          isAdmin={isAdmin}
+        />
+      )}
       {isAdmin && activeTab === 'activity' && (
         <ActivityTab candidateId={detail.candidate.id} />
       )}

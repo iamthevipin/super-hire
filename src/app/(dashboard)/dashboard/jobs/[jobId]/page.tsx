@@ -35,6 +35,7 @@ export default async function JobDetailPage({ params }: PageProps) {
     .single();
   if (!job) notFound();
 
+  const isAdmin = membership.role === 'admin' || membership.role === 'owner';
   const columns = await getKanbanData(jobId);
 
   return (
@@ -61,6 +62,7 @@ export default async function JobDetailPage({ params }: PageProps) {
       <KanbanBoard
         initialColumns={columns}
         jobId={jobId}
+        isAdmin={isAdmin}
       />
     </div>
   );

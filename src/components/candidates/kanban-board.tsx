@@ -22,6 +22,7 @@ import type { KanbanColumn as KanbanColumnType, ApplicationWithCandidate } from 
 interface KanbanBoardProps {
   initialColumns: KanbanColumnType[];
   jobId: string;
+  isAdmin?: boolean;
 }
 
 interface PendingMove {
@@ -29,7 +30,7 @@ interface PendingMove {
   newStageId: string;
 }
 
-export function KanbanBoard({ initialColumns, jobId }: KanbanBoardProps) {
+export function KanbanBoard({ initialColumns, jobId, isAdmin = false }: KanbanBoardProps) {
   const router = useRouter();
   const [columns, setColumns] = useState<KanbanColumnType[]>(initialColumns);
 
@@ -192,6 +193,7 @@ export function KanbanBoard({ initialColumns, jobId }: KanbanBoardProps) {
               key={column.stage.id}
               column={column}
               jobId={jobId}
+              isAdmin={isAdmin}
               onAddCandidate={
                 column.stage.name.toLowerCase() === 'applied'
                   ? () => setShowAddModal(true)
@@ -202,7 +204,7 @@ export function KanbanBoard({ initialColumns, jobId }: KanbanBoardProps) {
         </div>
         <DragOverlay>
           {activeApplication && (
-            <KanbanCard application={activeApplication} jobId={jobId} />
+            <KanbanCard application={activeApplication} jobId={jobId} isAdmin={isAdmin} />
           )}
         </DragOverlay>
       </DndContext>

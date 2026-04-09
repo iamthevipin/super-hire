@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
 import { WELCOME_CONTEXT_COOKIE } from '@/lib/constants/auth';
 import { WelcomeModalContainer } from '@/components/auth/welcome-modal';
+import { ComposeProvider } from '@/components/email/compose-provider';
+import { ComposeManager } from '@/components/email/compose-manager';
 
 export default async function DashboardLayout({
   children,
@@ -32,6 +34,7 @@ export default async function DashboardLayout({
     (user?.user_metadata?.full_name as string | undefined) ?? user?.email ?? '';
 
   return (
+    <ComposeProvider>
     <div className="min-h-screen" style={{ backgroundColor: '#f5f0eb' }}>
       {/* Top nav */}
       <header className="h-14 flex items-center px-6 bg-transparent">
@@ -102,6 +105,8 @@ export default async function DashboardLayout({
           shouldClear
         />
       )}
+      <ComposeManager />
     </div>
+    </ComposeProvider>
   );
 }

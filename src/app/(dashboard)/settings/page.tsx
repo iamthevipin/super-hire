@@ -3,9 +3,11 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { redirect } from 'next/navigation';
 import { SettingsNav } from '@/components/settings/settings-nav';
 import { TeamMembersTab } from '@/components/settings/team-members-tab';
+import { GmailIntegrationCard } from '@/components/settings/gmail-integration-card';
+import type { GmailIntegration } from '@/types/email';
 
 interface SettingsPageProps {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; error?: string }>;
 }
 
 export interface MemberRow {
@@ -20,7 +22,9 @@ export interface MemberRow {
 }
 
 export default async function SettingsPage({ searchParams }: SettingsPageProps) {
-  const { tab = 'profile' } = await searchParams;
+  const rawSearchParams = await searchParams;
+  const { tab = 'profile' } = rawSearchParams;
+  const oauthError = rawSearchParams.error ?? null;
 
   const supabase = await createClient();
 
@@ -91,13 +95,28 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   const allRows: MemberRow[] = [...memberRows, ...inviteRows];
 
+  const userRole = membership.role as string;
+  const isAdmin = userRole === 'admin' || userRole === 'owner';
+
+  // Fetch Gmail integration for integrations tab (admin-only)
+  let gmailIntegration: GmailIntegration | null = null;
+  if (tab === 'integrations' && isAdmin) {
+    const { data: integrationData } = await supabase
+      .from('user_integrations')
+      .select('id, user_id, enterprise_id, provider, gmail_address, created_at, updated_at')
+      .eq('user_id', user.id)
+      .eq('provider', 'gmail')
+      .single();
+    gmailIntegration = (integrationData as GmailIntegration | null) ?? null;
+  }
+
   return (
     <div className="flex gap-6 max-w-6xl mx-auto">
       {/* Sidebar */}
       <aside className="w-60 shrink-0">
         <div className="bg-white rounded-2xl p-4 shadow-sm">
           <p className="text-sm font-semibold text-[#141d1c] px-2 mb-3">Settings</p>
-          <SettingsNav activeTab={tab} />
+          <SettingsNav activeTab={tab} userRole={userRole} />
         </div>
       </aside>
 
@@ -106,7 +125,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         {tab === 'team' && (
           <TeamMembersTab
             rows={allRows}
-            userRole={membership.role as string}
+            userRole={userRole}
           />
         )}
 
@@ -127,6 +146,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <div className="mt-8 text-sm text-[#8fa8a6]">
               Subscription management coming soon.
             </div>
+          </div>
+        )}
+
+        {tab === 'integrations' && isAdmin && (
+          <GmailIntegrationCard
+            integration={gmailIntegration}
+            oauthError={oauthError}
+          />
+        )}
+
+        {tab === 'integrations' && !isAdmin && (
+          <div className="bg-white rounded-2xl p-8 shadow-sm">
+            <p className="text-sm text-[#8fa8a6]">You do not have permission to view this page.</p>
           </div>
         )}
       </div>

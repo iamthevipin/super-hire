@@ -9,10 +9,11 @@ import type { KanbanColumn as KanbanColumnType } from '@/types/candidates';
 interface KanbanColumnProps {
   column: KanbanColumnType;
   jobId: string;
+  isAdmin?: boolean;
   onAddCandidate?: () => void;
 }
 
-export function KanbanColumn({ column, jobId, onAddCandidate }: KanbanColumnProps) {
+export function KanbanColumn({ column, jobId, isAdmin = false, onAddCandidate }: KanbanColumnProps) {
   const { stage, applications } = column;
   const isApplied = stage.name.toLowerCase() === 'applied';
   const isRejected = stage.name.toLowerCase() === 'rejected';
@@ -73,7 +74,7 @@ export function KanbanColumn({ column, jobId, onAddCandidate }: KanbanColumnProp
           strategy={verticalListSortingStrategy}
         >
           {applications.map((application) => (
-            <KanbanCard key={application.id} application={application} jobId={jobId} />
+            <KanbanCard key={application.id} application={application} jobId={jobId} isAdmin={isAdmin} />
           ))}
         </SortableContext>
         {applications.length === 0 && (
